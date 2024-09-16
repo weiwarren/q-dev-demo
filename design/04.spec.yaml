@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: Simple Data Analytics API
+  version: 1.0.0
+  description: API for a simple data analytics application that allows users to upload CSV files, process data, and run queries.
+
+servers:
+  - url: https://api.example.com/v1
+
+paths:
+  /upload:
+    post:
+      summary: Upload a CSV file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileUpload'
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /preview:
+    get:
+      summary: Preview file data
+      parameters:
+        - name: file_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File data preview
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /submit:
+    post:
+      summary: Trigger a Glue crawler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlerRequest'
+      responses:
+        '202':
+          description: Crawler triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Crawler'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /status:
+    get:
+      summary: Get crawler status
+      parameters:
+        - name: crawler_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Crawler status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Crawler'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /query:
+    post:
+      summary: Execute a SQL query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '202':
+          description: Query submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Query'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      summary: Get query results
+      parameters:
+        - name: query_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    FileUpload:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        name:
+          type: string
+        description:
+          type: string
+
+    File:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        uploaded_at:
+          type: string
+          format: date-time
+
+    CrawlerRequest:
+      type: object
+      required:
+        - file_id
+      properties:
+        file_id:
+          type: string
+
+    Crawler:
+      type: object
+      properties:
+        id:
+          type: string
+        file_id:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, SUCCEEDED, FAILED]
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    QueryRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+
+    Query:
+      type: object
+      properties:
+        id:
+          type: string
+        query:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, SUCCEEDED, FAILED]
+        submitted_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    QueryResult:
+      type: object
+      properties:
+        query_id:
+          type: string
+        result:
+          type: array
+          items:
+            type: object
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+  parameters:
+    Pagination:
+      name: pagination
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Pagination'
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+# Additional Notes:
+
+# Authentication and Authorization:
+# - The API uses JWT authentication with Amazon Cognito user pools.
+# - All endpoints require a valid JWT token in the `Authorization` header.
+# - Roles and permissions can be managed through Cognito groups and scopes.
+
+# Rate Limiting:
+# - Rate limiting should be implemented to prevent abuse and ensur
