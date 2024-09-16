@@ -13,6 +13,7 @@ mkdir -p src/server/app \
 && touch src/server/app/services/__init__.py \
 && touch src/server/app/services/file_service.py \
 && touch src/server/app/services/data_service.py \
+&& touch src/server/app/services/query_service.py \
 && mkdir -p src/server/app/utils \
 && touch src/server/app/utils/__init__.py \
 && touch src/server/app/utils/security.py \
@@ -31,10 +32,7 @@ mkdir -p src/server/tests \
 && touch src/server/tests/services/test_data_service.py \
 && mkdir -p src/server/tests/utils \
 && touch src/server/tests/utils/__init__.py \
-&& touch src/server/tests/utils/test_security.py
+&& touch src/server/tests/utils/test_security.py \
+&& touch src/server/requirements.txt
 
-# Create the requirements.txt file
-touch src/server/requirements.txt
-
-# Create the client folder
 mkdir -p src/client
