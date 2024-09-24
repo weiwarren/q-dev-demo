@@ -45,6 +45,7 @@ Q Dev in cli
 - Provide example of test case including mock and dependencies instead of let it magically figure out all the mocks required in the function chain.
 - Use Cmd+C to force generation if you are not getting anything or send it to chat directly
 - Insert comments if you are not getting inline suggestions.
+- Escape all the triple ticks, all the hash and empty line break to remove automatic styling in chat
 
 # Problem Statement
 - [ ] A simple data lake platform to upload CSV, preview a subset of data / (maybe transform), then trigger glue to crawl so I can query using athena from the app.
