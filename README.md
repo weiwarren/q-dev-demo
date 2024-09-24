@@ -27,7 +27,7 @@ Q Dev in cli
  not store any user data.
 
 # Amazon Q App
-- [ ] Terminal integration
+- [ ] Terminal integration - for git commit messages / cli autocompletion
 - [ ] other features
 
 # What is not suppoerted in Q Dev inline suggestion
@@ -36,6 +36,15 @@ Q Dev in cli
 - .env, .properties ...
 - .css, .scss, .less ...
 - html, .ejs ...
+
+# Tips and tricks
+- Generate the plan (analysis) => generate the architecture (design) => generate the api (documentations) => generate folder and files (boilerplate) => generate skeleton code => inline completion => generate unit tests => generate deployment code => generate e2e / integration tests for benchmarking
+- Separate ideation from code generation
+- Generate skeleton with comments using chat, use inline suggestions later on
+- Use it to create test case scenarios for the code instead of generating valid test cases at once
+- Provide example of test case including mock and dependencies instead of let it magically figure out all the mocks required in the function chain.
+- Use Cmd+C to force generation if you are not getting anything or send it to chat directly
+- Insert comments if you are not getting inline suggestions.
 
 # Problem Statement
 - [ ] A simple data lake platform to upload CSV, preview a subset of data / (maybe transform), then trigger glue to crawl so I can query using athena from the app.
