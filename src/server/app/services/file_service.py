@@ -1,86 +1,101 @@
-from fastapi import UploadFile
-from app.schemas import UploadResponse, PreviewResponse, SubmitResponse
-import boto3
-from botocore.exceptions import ClientError
-from fastapi import UploadFile, HTTPException
-from app.schemas import UploadResponse
-from app.core.config import settings
+import os
 import uuid
+from typing import List, Any
+from fastapi import UploadFile
+from app.config import settings
+import pandas as pd
+import numpy as np
+import boto3
+from botocore import exceptions as botocore_exceptions
+import logging
+
+logger = logging.getLogger(__name__)
+
+if settings.S3_ENDPOINT_URL:
+    print("Using local S3 client")
+    s3 = boto3.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
+else:
+    print("Using prod S3 client")
+    s3 = boto3.client("s3")
+large_number = 1e308  # Maximum float value in Python
 
 
-async def upload_file(file: UploadFile) -> UploadResponse:
-    """
-    Upload a file to Amazon S3.
-
-    Args:
-        file (UploadFile): The file to upload.
-
-    Returns:
-        UploadResponse: The response containing the file ID and a success message.
-
-    Raises:
-        HTTPException: If there's an error during file upload.
-    """
-    # raise exception if file name is not set
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="File name is required")
-    try:
-        # Generate a unique file ID
-        file_id = str(uuid.uuid4())
-
-        # Create an S3 client
-        s3 = boto3.client("s3")
-
-        file_extension = file.filename.split(".")[-1] if file.filename else None
-
-        # Generate a unique S3 object key
-        s3_key = f"{file_id}.{file_extension}" if file_extension else file_id
-
-        # Upload the file to S3
-
-        s3.upload_fileobj(file.file, settings.S3_BUCKET_NAME, s3_key)
-
-        res = UploadResponse(
-            file_id=file_id, message="File uploaded successfully to S3"
+class FileService:
+    def list_buckets():
+        """
+        list buckets with name prefixed data
+        """
+        aws_access_key_id = "AKIAIOSFODNN7EXAMPLE"
+        aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
         )
-        return res
-
-    except ClientError as e:
-        # Handle S3-specific errors
-        error_message = e.response["Error"]["Message"]
-        raise HTTPException(
-            status_code=500, detail=f"S3 upload failed: {error_message}"
-        )
-    except Exception as e:
-        # Handle any other unexpected errors
-        raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
-        )
+        response = s3.list_buckets()
+        buckets = [bucket["Name"] for bucket in response["Buckets"]]
+        return buckets
 
 
-async def preview_file(file_id: str) -> PreviewResponse:
-    """
-    Preview the top 100 rows of a file.
+    async def upload_file(self, file: UploadFile) -> str:
+        """
+        Uploads a file to Amazon S3 bucket using boto3 with a unique file key.
+        """
 
-    Args:
-        file_id (str): The ID of the file to preview.
+        file_key = f"{settings.S3_PREVIEW_PREFIX}/{str(uuid.uuid4())}/{file.filename}"
+        file_content = await file.read()
+        # Use boto3 to upload the file to S3 bucket
+        try:
+            s3.upload_fileobj(file.file, settings.S3_BUCKET_NAME, file_key)
+            return file_key
+        except botocore_exceptions.ClientError as e:
+            print(f"Error uploading file to S3: {e}")
+            raise e
 
-    Returns:
-        PreviewResponse: The response containing the preview data and columns.
-    """
-    # Implement file preview logic here
-    pass
+    async def preview_file(self, file_key: str) -> dict:
+        """
+        Previews the first few rows of a CSV file.
 
+        Args:
+            file_key (str): The unique file key for the uploaded file.
 
-async def submit_file(file_id: str) -> SubmitResponse:
-    """
-    Submit a file to S3 and trigger a Glue crawler job.
+        Returns:
+            {headers: columns data, data: rows}
+        """
+        # Use boto3 to download the file from S3 bucket
+        try:
+            obj = s3.get_object(Bucket=settings.S3_BUCKET_NAME, Key=file_key)
+            print("successfully got file")
+            file_content = obj["Body"]
+            nrows = settings.NUM_PREVIEW_ROWS
 
-    Args:
-        file_id (str): The ID of the file to submit.
+            # Read top 100 rows from csv
 
-    Returns:
-        SubmitResponse: The response containing the job ID and a success message.
-    """
-    # Implement file submission logic here
-    pass
+            data = pd.read_csv(
+                file_content,
+                nrows=nrows,
+                dtype=object,
+            )
+
+            print("successfully read file")
+
+            data = data.replace([np.inf, -np.inf], np.nan)
+            data = data.fillna(method="ffill")
+
+            # Convert data types for each column
+            for col in data.columns:
+                col_data = data[col].infer_objects()
+                if col_data.dtypes == "int64":
+                    data[col] = col_data.astype("Int64")
+                elif col_data.dtypes == "float64":
+                    data[col] = col_data.astype("float64").apply(
+                        lambda x: x if x == x else None
+                    )
+
+            headers = data.columns.tolist()
+            data = [list(row) for row in data.values]
+            print("successfully converted data")
+            return {"headers": headers, "data": data}
+        except botocore_exceptions.ClientError as e:
+            logger.error(f"Error downloading file from S3: {e}")
+            raise e
