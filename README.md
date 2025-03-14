@@ -12,7 +12,7 @@ Q Dev in cli
 - [ ] Q chat
 
 # Extensions
-- [ ] v1.25.0
+- [ ] v1.50.0
 - [ ] fast release cycle (3-4 release / months)
 - [ ] Connected with product team for feedback and continous improvements
 
@@ -27,7 +27,7 @@ Q Dev in cli
  not store any user data.
 
 # Amazon Q App
-- [ ] Terminal integration - for git commit messages / cli autocompletion
+- [ ] Q cli - powerful developer extension in terminal (claude 3.7)
 - [ ] other features
 
 # What is not suppoerted in Q Dev inline suggestion
